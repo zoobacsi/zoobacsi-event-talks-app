@@ -2,12 +2,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- State ---
     let rawEntries = [];
     let parsedItems = [];
+    let currentlyFilteredItems = [];
     let currentFilter = 'all';
     let searchQuery = '';
     let selectedItemForTweet = null;
 
     // --- DOM Elements ---
     const btnRefresh = document.getElementById('btn-refresh');
+    const btnExportCsv = document.getElementById('btn-export-csv');
     const spinner = document.getElementById('spinner');
     const searchInput = document.getElementById('search-input');
     const btnClearSearch = document.getElementById('btn-clear-search');
@@ -188,6 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // 2. Render feed or show empty state
+        currentlyFilteredItems = filtered;
         if (filtered.length === 0) {
             timelineFeed.style.display = 'none';
             emptyState.style.display = 'flex';
@@ -299,6 +302,43 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             actions.appendChild(btnLink);
         }
+
+        // Copy to Clipboard Button
+        const btnCopy = document.createElement('button');
+        btnCopy.className = 'btn-icon-copy';
+        btnCopy.title = 'Copy details to clipboard';
+        
+        const copySvg = `
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+        `;
+        const successSvg = `
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+        `;
+        btnCopy.innerHTML = copySvg;
+
+        btnCopy.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const textToCopy = `BigQuery Update (${item.date}) - ${item.category}:\n${item.contentText}\n\nLink: ${item.link || 'N/A'}`;
+            try {
+                await navigator.clipboard.writeText(textToCopy);
+                btnCopy.classList.add('success');
+                btnCopy.innerHTML = successSvg;
+                btnCopy.title = 'Copied!';
+                setTimeout(() => {
+                    btnCopy.classList.remove('success');
+                    btnCopy.innerHTML = copySvg;
+                    btnCopy.title = 'Copy details to clipboard';
+                }, 2000);
+            } catch (err) {
+                console.error('Failed to copy text: ', err);
+            }
+        });
+        actions.appendChild(btnCopy);
 
         header.appendChild(actions);
         card.appendChild(header);
@@ -461,6 +501,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Send Tweet
     btnSendTweet.addEventListener('click', sendTweet);
+
+    // Export to CSV
+    btnExportCsv.addEventListener('click', () => {
+        if (currentlyFilteredItems.length === 0) {
+            alert('No items to export.');
+            return;
+        }
+
+        const escapeCSV = (text) => {
+            if (!text) return '""';
+            return '"' + text.replace(/"/g, '""').replace(/\r?\n|\r/g, ' ') + '"';
+        };
+
+        // CSV Header
+        const csvRows = [['Date', 'Category', 'Description', 'Link']];
+
+        // CSV Body
+        currentlyFilteredItems.forEach(item => {
+            csvRows.push([
+                item.date,
+                item.category,
+                item.contentText,
+                item.link || ''
+            ]);
+        });
+
+        // Convert to CSV string
+        const csvContent = csvRows.map(row => row.map(escapeCSV).join(',')).join('\n');
+
+        // Download CSV file
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const timestamp = new Date().toISOString().split('T')[0];
+        link.setAttribute('href', url);
+        link.setAttribute('download', `bigquery_release_notes_${timestamp}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    });
 
     // --- Init ---
     loadFeed();
