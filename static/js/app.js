@@ -10,6 +10,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- DOM Elements ---
     const btnRefresh = document.getElementById('btn-refresh');
     const btnExportCsv = document.getElementById('btn-export-csv');
+    const btnThemeToggle = document.getElementById('btn-theme-toggle');
+    const themeIconSun = document.getElementById('theme-icon-sun');
+    const themeIconMoon = document.getElementById('theme-icon-moon');
     const spinner = document.getElementById('spinner');
     const searchInput = document.getElementById('search-input');
     const btnClearSearch = document.getElementById('btn-clear-search');
@@ -541,6 +544,28 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+    });
+
+    // --- Theme Init ---
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    if (savedTheme === 'light') {
+        document.body.classList.add('light-theme');
+        themeIconSun.style.display = 'none';
+        themeIconMoon.style.display = 'block';
+    }
+
+    // Theme Toggle Click
+    btnThemeToggle.addEventListener('click', () => {
+        const isLight = document.body.classList.toggle('light-theme');
+        if (isLight) {
+            localStorage.setItem('theme', 'light');
+            themeIconSun.style.display = 'none';
+            themeIconMoon.style.display = 'block';
+        } else {
+            localStorage.setItem('theme', 'dark');
+            themeIconSun.style.display = 'block';
+            themeIconMoon.style.display = 'none';
+        }
     });
 
     // --- Init ---
